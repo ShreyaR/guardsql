@@ -28,7 +28,7 @@ def get_embedding(text, model="text-embedding-ada-002"):
 ds = deeplake.load('hub://guardsql/wikisql')
 ds.checkout("44ebd41f1461dddbe2e1f142dbc6cc245eaaafd7")
 embeddings = ds.embeddings[:10].numpy()
-dbfile = "./data/train.db"
+dbfile = "./data/test.db"
 
 engine = DBEngine(dbfile)
 
@@ -54,12 +54,30 @@ def sqllite_db_to_prompt(db_path: str) -> str:
             schema[table_name].append(column['name'])
     return pretty_repr(dict(schema))
 
+def sqllite_db_to_prompt_tables(db_path: str, table="") -> str:
+    engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
+    inspector = sqlalchemy.inspect(engine)
+    schema = defaultdict(list)
+    
+    for table_name in inspector.get_table_names():
+        if table_name != table:
+            continue
+        for column in inspector.get_columns(table_name):
+            schema[table_name].append(column['name'])
+            
+    return pretty_repr(schema)
+
 if __name__ == '__main__':
     query = "get all iamges"
     examples = get_examples(query)
+
+    qg = ""
     for example in examples:
         print(example[0])
         print(example[1])
+        qg = example[1]
+        
+    gold = engine.execute_query("table_10875694_11", qg, lower=True)
 
     #prompt = sqllite_db_to_prompt(dbfile)
     #print(prompt)
